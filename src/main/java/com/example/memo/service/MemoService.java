@@ -3,45 +3,60 @@ package com.example.memo.service;
 import com.example.memo.dto.MemoRequestDto;
 import com.example.memo.dto.MemoResponseDto;
 import com.example.memo.entity.Memo;
+import com.example.memo.repository.MemoRepository;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.support.GeneratedKeyHolder;
-import org.springframework.jdbc.support.KeyHolder;
 
-import java.sql.PreparedStatement;
-import java.sql.Statement;
+import java.util.List;
 
 public class MemoService {
 
-    private final JdbcTemplate jdbcTemplate;
+    private final MemoRepository memoRepository;
 
     public MemoService(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
+        this.memoRepository = new MemoRepository(jdbcTemplate);
     }
+
     public MemoResponseDto createMemo(MemoRequestDto requestDto) {
         // RequestDto -> Entity
         Memo memo = new Memo(requestDto);
 
         // DB 저장
-        KeyHolder keyHolder = new GeneratedKeyHolder(); // 기본 키를 반환받기 위한 객체
-
-        String sql = "INSERT INTO memo (username, contents) VALUES (?, ?)";
-        jdbcTemplate.update( con -> {
-                    PreparedStatement preparedStatement = con.prepareStatement(sql,
-                            Statement.RETURN_GENERATED_KEYS);
-
-                    preparedStatement.setString(1, memo.getUsername());
-                    preparedStatement.setString(2, memo.getContents());
-                    return preparedStatement;
-                },
-                keyHolder);
-
-        // DB Insert 후 받아온 기본키 확인
-        Long id = keyHolder.getKey().longValue();
-        memo.setId(id);
+        Memo saveMemo = memoRepository.save(memo);
 
         // Entity -> ResponseDto
         MemoResponseDto memoResponseDto = new MemoResponseDto(memo);
 
         return memoResponseDto;
+    }
+
+    public List<MemoResponseDto> getMemos() {
+        // DB 조회
+        return memoRepository.findAll();
+    }
+
+    public Long updateMemo(Long id, MemoRequestDto requestDto) {
+        // 해당 메모가 DB에 존재하는지 확인
+        Memo memo = memoRepository.findById(id);
+        if (memo != null) {
+            // memo 내용 수정
+            memoRepository.update(id, requestDto);
+
+            return id;
+        } else {
+            throw new IllegalArgumentException("선택한 메모는 존재하지 않습니다.");
+        }
+    }
+
+    public Long deleteMemo(Long id) {
+        // 해당 메모가 DB에 존재하는지 확인
+        Memo memo = memoRepository.findById(id);
+        if (memo != null) {
+            // memo 삭제
+            memoRepository.delete(id);
+
+            return id;
+        } else {
+            throw new IllegalArgumentException("선택한 메모는 존재하지 않습니다.");
+        }
     }
 }
