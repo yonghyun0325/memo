@@ -49,7 +49,6 @@ public class MemoService {
     public Long deleteMemo(Long id) {
         // 해당 메모가 DB에 존재하는지 확인
         Memo memo = findMemo(id);
-
         // memo 삭제
         memoRepository.delete(memo);
 
